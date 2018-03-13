@@ -19,7 +19,7 @@ def writeFramesToFile(frames, filename, normalize=True):
         normalizeAudioFile(filename)
 
 
-def normalizeAudioFile(filename, target_dBFS=-25.0):
+def normalizeAudioFile(filename, target_dBFS=-10.0):
     def match_target_amplitude(sound, target_dBFS):
         change_in_dBFS = target_dBFS - sound.dBFS
         return sound.apply_gain(change_in_dBFS)
@@ -28,11 +28,12 @@ def normalizeAudioFile(filename, target_dBFS=-25.0):
     normalized_sound = match_target_amplitude(sound, target_dBFS)
     normalized_sound.export(filename, format="wav")
 
-def copyFileToBackupFolder(filename):
-        if "manual_record" in filename:
-            folder = "Manual_Records"
-        else:
-            folder = "Audio_Backups"
+def copyFileToBackupFolder(filename, folder=None):
+        if folder == None:
+            if "manual_record" in filename:
+                folder = "Manual_Records"
+            else:
+                folder = "Audio_Backups"
         formatted_date = str(datetime.datetime.now()).split('.')[0].replace(":", "_")
         number_of_bytes_in_one_second_of_audio = float(198656) # kind of arbitrary, I calculated it from one of my files
         seconds_in_file_formatted_nicely = str(round(os.path.getsize(filename)/number_of_bytes_in_one_second_of_audio, 1)).replace(".", ",")

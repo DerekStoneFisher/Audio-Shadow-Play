@@ -20,7 +20,6 @@ def updateKeysDown(event):
     key = str(event.Key).lower()
     if "down" in event.MessageName and key not in keys_down:
         keys_down.append(key)
-        print keys_down
     if "up" in event.MessageName:
         keys_down.remove(key)
 
@@ -44,11 +43,12 @@ def runpyHookThread():
                 cached_frames = frames[-secondsToFrames(1):]
                 extended_cache = frames[-secondsToFrames(5):]
                 Audio_Utils.writeFramesToFile(cached_frames, key + ".wav")
-                for i in range(1,9):
+                for i in range(1,10):
                     half_i = float(i)/2
-                    print "half_i = " + str(half_i) + " and frames = " + str(secondsToFrames(half_i))
                     Audio_Utils.writeFramesToFile(extended_cache[-secondsToFrames(half_i):], "Extended_Audio" + "/" + key + "-" + str(half_i) + ".wav")
-            elif key == "pause":
+            elif keys_down[0] in "qwer" and keys_down[1] == "oem_3": # oem_3 is tilde
+                Audio_Utils.copyFileToBackupFolder(keys_down[0]+".wav", "Favorites")
+            elif keys_down[0] == "lmenu" and keys_down[1] == "pause":
                 sys.exit()
 
         return True
@@ -79,8 +79,6 @@ def listen():
         if len(frames) > secondsToFrames(60):
             frames = frames[-secondsToFrames(10):]
         frames.append(read_result)
-        if len(frames) % 43 == 0:
-            print str(len(frames)/43) + " ",
 
 
 
@@ -91,4 +89,5 @@ def main():
     listen_t = threading.Thread(target=listen)
     listen_t.start()
 
-main()
+if __name__ == "__main__":
+    main()
