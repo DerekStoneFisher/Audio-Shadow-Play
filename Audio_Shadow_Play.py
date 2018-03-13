@@ -1,4 +1,5 @@
 import threading
+import time
 
 
 import pyaudio
@@ -12,38 +13,41 @@ frames = []
 cached_frames = []
 extended_cache = []
 
-keys_down = set()
+keys_down = []
+keyToExtendedSoundMap = dict()
 
 def updateKeysDown(event):
-    if "down" in event.MessageName:
-        keys_down.add(str(event.Key).lower())
+    key = str(event.Key).lower()
+    if "down" in event.MessageName and key not in keys_down:
+        keys_down.append(key)
+        print keys_down
     if "up" in event.MessageName:
-        keys_down.remove(str(event.Key).lower())
+        keys_down.remove(key)
 
 def secondsToFrames(n):
-    return n*43
+    return int(n*43)
 
 def runpyHookThread():
     def OnKeyboardEvent(event):
         global frames, cached_frames, extended_cache, keys_down
         updateKeysDown(event)
-        if event.MessageName != 'key up' and event.Alt != 0 and event.Key != 'Lmenu':
+        key = str(event.Key).lower()
 
-            key = str(event.Key).lower()
-            if key in "123456789":
-                number = int(key)
-                frames_to_save = number * 43
-                cached_frames = frames[-frames_to_save:]
+        if len(keys_down) == 2:
+            if keys_down[0] in "qwer" and str(keys_down[1]) in "123456789":
+                letter = keys_down[0]
+                number = str(float(keys_down[1])/2)
+                Audio_Utils.swapAudioFileOutForExtendedVersion(letter+".wav", number)
+            elif keys_down[0] == "lmenu" and keys_down[1] in "qwer":
+                time.sleep(.25)
+                print "SAVED " + keys_down[1]
+                cached_frames = frames[-secondsToFrames(1):]
                 extended_cache = frames[-secondsToFrames(5):]
-                Audio_Utils.writeFramesToFile(cached_frames, "manual_record.wav");
-                print str(datetime.datetime.now()).split('.')[0] + ": " + str(len(cached_frames)/43) + " seconds of audio to 'manual_record.wav' because of user input 'alt + " + key + "'"
-
-
-            elif key in "qwer":
                 Audio_Utils.writeFramesToFile(cached_frames, key + ".wav")
-                for i in range(1,6):
-                    Audio_Utils.writeFramesToFile(extended_cache[-secondsToFrames(i):], "Extended_Audio" + "/" + key + "-" + str(i) + ".wav")
-                print str(datetime.datetime.now()).split('.')[0] + ": saved " + str(len(cached_frames)/43) + " seconds of audio to '" + key + ".wav' because of user input 'alt + " + key + "'"
+                for i in range(1,9):
+                    half_i = float(i)/2
+                    print "half_i = " + str(half_i) + " and frames = " + str(secondsToFrames(half_i))
+                    Audio_Utils.writeFramesToFile(extended_cache[-secondsToFrames(half_i):], "Extended_Audio" + "/" + key + "-" + str(half_i) + ".wav")
             elif key == "pause":
                 sys.exit()
 

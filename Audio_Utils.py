@@ -7,7 +7,6 @@ import datetime
 import pyaudio
 
 def writeFramesToFile(frames, filename, normalize=True):
-    print "saving " + str(len(frames)) + " to filename " + str(filename)
     wf = wave.open(filename, 'wb')
     wf.setnchannels(2)
     wf.setsampwidth(pyaudio.PyAudio().get_sample_size(pyaudio.paInt16))
@@ -20,7 +19,7 @@ def writeFramesToFile(frames, filename, normalize=True):
         normalizeAudioFile(filename)
 
 
-def normalizeAudioFile(filename, target_dBFS=-30.0):
+def normalizeAudioFile(filename, target_dBFS=-25.0):
     def match_target_amplitude(sound, target_dBFS):
         change_in_dBFS = target_dBFS - sound.dBFS
         return sound.apply_gain(change_in_dBFS)
@@ -36,5 +35,10 @@ def copyFileToBackupFolder(filename):
             folder = "Audio_Backups"
         formatted_date = str(datetime.datetime.now()).split('.')[0].replace(":", "_")
         number_of_bytes_in_one_second_of_audio = float(198656) # kind of arbitrary, I calculated it from one of my files
-        seconds_in_file_formatted_nicely = str(int(round(os.path.getsize(filename)/number_of_bytes_in_one_second_of_audio, 0)))
+        seconds_in_file_formatted_nicely = str(round(os.path.getsize(filename)/number_of_bytes_in_one_second_of_audio, 1)).replace(".", ",")
         copyfile(filename, folder + "/" + filename.replace(".wav", "") + " " + seconds_in_file_formatted_nicely + " seconds - " + formatted_date + ".wav")
+
+def swapAudioFileOutForExtendedVersion(filename, new_duration):
+    extended_path = "Extended_Audio" + "/" + filename.split(".")[0] + "-"+new_duration + ".wav"
+    copyfile(extended_path, filename) # replace old file with extended version
+    print "COPIED " + extended_path + " TO " + filename
