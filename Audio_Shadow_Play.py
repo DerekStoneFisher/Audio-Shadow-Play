@@ -7,7 +7,6 @@ import Audio_Utils
 import pythoncom
 import pyHook
 import sys
-import datetime
 
 frames = []
 cached_frames = []
@@ -30,7 +29,6 @@ def runpyHookThread():
     def OnKeyboardEvent(event):
         global frames, cached_frames, extended_cache, keys_down
         updateKeysDown(event)
-        key = str(event.Key).lower()
 
         if len(keys_down) == 2:
             if keys_down[0] in "qwer" and str(keys_down[1]) in "123456789":
@@ -42,12 +40,22 @@ def runpyHookThread():
                 print "SAVED " + keys_down[1]
                 cached_frames = frames[-secondsToFrames(1):]
                 extended_cache = frames[-secondsToFrames(5):]
-                Audio_Utils.writeFramesToFile(cached_frames, key + ".wav")
+                Audio_Utils.writeFramesToFile(cached_frames, keys_down[1] + ".wav")
                 for i in range(1,10):
                     half_i = float(i)/2
-                    Audio_Utils.writeFramesToFile(extended_cache[-secondsToFrames(half_i):], "Extended_Audio" + "/" + key + "-" + str(half_i) + ".wav")
+                    Audio_Utils.writeFramesToFile(extended_cache[-secondsToFrames(half_i):], "Extended_Audio" + "/" + keys_down[1] + "-" + str(half_i) + ".wav")
             elif keys_down[0] in "qwer" and keys_down[1] == "oem_3": # oem_3 is tilde
                 Audio_Utils.copyFileToBackupFolder(keys_down[0]+".wav", "Favorites")
+            elif keys_down[0] in "qwer": # directional keys
+                letter_file = keys_down[0] + ".wav"
+                if keys_down[1] == "left":
+                    Audio_Utils.trimEnd(letter_file, letter_file, 250)
+                elif keys_down[1] == "right":
+                    Audio_Utils.trimStart(letter_file, letter_file, 250)
+                elif keys_down[1] == "up":
+                    Audio_Utils.trimStart(letter_file, letter_file, 50)
+                elif keys_down[1] == "down":
+                    Audio_Utils.trimEnd(letter_file, letter_file, 50)
             elif keys_down[0] == "lmenu" and keys_down[1] == "pause":
                 sys.exit()
 
