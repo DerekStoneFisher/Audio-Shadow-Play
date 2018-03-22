@@ -8,9 +8,23 @@ import pythoncom
 import pyHook
 import sys
 
+from pydub import AudioSegment
+import wave
+import os
+import shutil
+import datetime
+
+import pyaudio
+
+
+
 frames = []
 cached_frames = []
 extended_cache = []
+record_start = None
+record_end = None
+# last_record_start = None
+# last_record_end = None
 
 keys_down = []
 keyToExtendedSoundMap = dict()
@@ -27,7 +41,7 @@ def secondsToFrames(n):
 
 def runpyHookThread():
     def OnKeyboardEvent(event):
-        global frames, cached_frames, extended_cache, keys_down
+        global frames, cached_frames, extended_cache, keys_down, record_start, record_end
         updateKeysDown(event)
 
         if len(keys_down) == 2:
@@ -44,9 +58,9 @@ def runpyHookThread():
                 for i in range(1,10):
                     half_i = float(i)/2
                     Audio_Utils.writeFramesToFile(extended_cache[-secondsToFrames(half_i):], "Extended_Audio" + "/" + keys_down[1] + "-" + str(half_i) + ".wav")
-            elif keys_down[0] in "qwer" and keys_down[1] == "oem_3": # oem_3 is tilde
+            elif keys_down[0] in "qwerx" and keys_down[1] == "oem_3": # oem_3 is tilde
                 Audio_Utils.copyFileToBackupFolder(keys_down[0]+".wav", "Favorites")
-            elif keys_down[0] in "qwer": # directional keys
+            elif keys_down[0] in "qwerx": # directional keys
                 letter_file = keys_down[0] + ".wav"
                 if keys_down[1] == "left":
                     Audio_Utils.trimEnd(letter_file, letter_file, 250)
@@ -58,6 +72,18 @@ def runpyHookThread():
                     Audio_Utils.trimEnd(letter_file, letter_file, 50)
             elif keys_down[0] == "lmenu" and keys_down[1] == "pause":
                 sys.exit()
+            elif keys_down[0] == "lmenu" and keys_down[1] == "x":
+                if record_start is None: # if we aren't already recording
+                    record_start = len(frames)-1 # save index of current frame
+                else: # if we are already recording
+                    time.sleep(.25)
+                    record_end = len(frames)-1 # save index of where we stopped recording
+                    Audio_Utils.writeFramesToFile(frames[record_start:record_end], "x.wav")
+                    record_start = None
+                    record_end = None
+
+
+
 
         return True
 
@@ -73,7 +99,7 @@ def runpyHookThread():
         pass
 
 def listen():
-    global frames
+    global frames, record_start
     stream = pyaudio.PyAudio().open(
         format=pyaudio.paInt16,
         channels=2,
@@ -84,7 +110,7 @@ def listen():
 
     while True:
         read_result = stream.read(1024)
-        if len(frames) > secondsToFrames(60):
+        if len(frames) > secondsToFrames(60) and record_start is None: # every 60 seconds, reset the size of our frame array UNLESS we are currently recording something (record_start gets set to a number if we are)
             frames = frames[-secondsToFrames(10):]
         frames.append(read_result)
 

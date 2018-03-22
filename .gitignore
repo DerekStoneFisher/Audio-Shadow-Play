@@ -1,2 +1,6 @@
 *.idea
 *.pyc
+dist/
+dist_old/
+*.zip
+*.wav
