@@ -85,3 +85,19 @@ def trimStart(infile, outfilename, trim_ms):
 
     shutil.move("_"+outfilename, outfilename)
 
+
+def getIndexOfStereoMix():
+    p = pyaudio.PyAudio()
+    info = p.get_host_api_info_by_index(0)
+    numdevices = info.get('deviceCount')
+    index_of_stereo_mix = None
+    for i in range(0, numdevices):
+            if (p.get_device_info_by_host_api_device_index(0, i).get('maxInputChannels')) > 0:
+                device_name = p.get_device_info_by_host_api_device_index(0, i).get('name')
+                print "Input Device id ", i, " - ", device_name
+                if "Stereo Mix" in device_name:
+                    index_of_stereo_mix = i
+                    print "set index of input device (stereo mix) to " + str(i)
+    if index_of_stereo_mix is None:
+        raise ValueError("ERROR: COULD NOT FIND STEREO MIX - MAKE SURE IT IS ENABLED")
+    return index_of_stereo_mix

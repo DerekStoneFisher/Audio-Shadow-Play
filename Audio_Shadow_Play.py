@@ -106,6 +106,7 @@ def listen():
         rate=44100,
         input=True,
         frames_per_buffer=1024,
+        input_device_index=Audio_Utils.getIndexOfStereoMix()
     )
 
     while True:
