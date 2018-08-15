@@ -7,14 +7,15 @@ import datetime
 import pyaudio
 
 def writeFramesToFile(frames, filename, normalize=True):
+    if os.path.exists(filename) and "Extended_Audio" not in filename:
+        copyfileToBackupFolder(filename)
+        os.remove(filename)
     wf = wave.open(filename, 'wb')
     wf.setnchannels(2)
     wf.setsampwidth(pyaudio.PyAudio().get_sample_size(pyaudio.paInt16))
     wf.setframerate(44100)
     wf.writeframes(b''.join(frames))
     wf.close()
-    if os.path.exists(filename) and "Extended_Audio" not in filename:
-        copyfileToBackupFolder(filename)
     if normalize:
         normalizeAudioFile(filename)
 
@@ -39,10 +40,6 @@ def copyfileToBackupFolder(filename, folder=None):
         seconds_in_file_formatted_nicely = str(round(os.path.getsize(filename)/number_of_bytes_in_one_second_of_audio, 1)).replace(".", ",")
         shutil.copyfile(filename, folder + "/" + filename.replace(".wav", "") + " " + seconds_in_file_formatted_nicely + " seconds - " + formatted_date + ".wav")
 
-def swapAudioFileOutForExtendedVersion(filename, new_duration):
-    extended_path = "Extended_Audio" + "/" + filename.split(".")[0] + "-"+new_duration + ".wav"
-    shutil.copyfile(extended_path, filename) # replace old file with extended version
-    print "COPIED " + extended_path + " TO " + filename
 
 def trimEnd(infile, outfilename, trim_ms):
     infile = wave.open(infile, "r")
