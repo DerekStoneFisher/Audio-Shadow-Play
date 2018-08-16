@@ -72,6 +72,16 @@ class SoundEntry:
     def stop(self):
         self.continue_playing = False
 
+    def updateFromState(self, state):
+        if state.mark_frame_index_of_last_sound:
+            self.mark_frame_index = True
+        if state.jump_to_frame_index_of_last_sound:
+            self.jump_to_marked_frame_index = True
+        if state.move_marked_frame_forward: # if down pressed, move marked frame back by .1 sec
+            self.marked_frame_index = max(0, self.marked_frame_index-Audio_Utils.secondsToFrames(.2)) # shift back in frames by .2 seconds. used max() with 0 to not get out of bounds error
+        if state.move_marked_frame_backward:
+            self.marked_frame_index = max(0, self.marked_frame_index+Audio_Utils.secondsToFrames(.2))
+
 
 if __name__ == "__main__":
     sound = SoundEntry("x1.wav")

@@ -144,3 +144,11 @@ def getIndexOfSpeakers():
     # frame_out = np.array(frame_copy * 0.5, dtype='int16') #undo the *2 that was done at reading
     # chunk_out = struct.pack("%dh"%(len(frame_out)), *list(frame_out)) #convert back to 16-bit data
     # return chunk_out
+
+
+
+def secondsToFrames(seconds):
+    return int(seconds*43)
+
+def framesToSeconds(frames):
+    return '%.2f' % (float(frames)/43)
