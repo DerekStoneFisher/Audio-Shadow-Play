@@ -3,8 +3,10 @@ import wave
 import os
 import shutil
 import datetime
-
+import struct
 import pyaudio
+import numpy as np
+
 
 def writeFramesToFile(frames, filename, normalize=True):
     if os.path.exists(filename) and "Extended_Audio" not in filename:
@@ -19,6 +21,18 @@ def writeFramesToFile(frames, filename, normalize=True):
     if normalize:
         normalizeAudioFile(filename)
 
+
+def getFramesFromFile(filename):
+    if os.path.exists(filename):
+        wf = wave.open(filename, 'rb')
+        frames = []
+        frame = wf.readframes(1024)
+        while frame != '':
+            frames.append(frame)
+            frame = wf.readframes(1024)
+        return frames
+    else:
+        print "error: cannot write file to frames because file does not exist\tfilename=" + str(filename)
 
 def normalizeAudioFile(filename, target_dBFS=-20.0):
     def match_target_amplitude(sound, target_dBFS):
@@ -98,3 +112,7 @@ def getIndexOfStereoMix():
     if index_of_stereo_mix is None:
         raise ValueError("ERROR: COULD NOT FIND STEREO MIX - MAKE SURE IT IS ENABLED")
     return index_of_stereo_mix
+
+def getIndexOfSpeakers():
+    p = pyaudio.PyAudio()
+    return p.get_default_output_device_info()
