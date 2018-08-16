@@ -1,16 +1,23 @@
 import Audio_Utils
 import pyaudio
-import time
 
 
 class SoundCollection:
     def __init__(self, key_bind_map=None):
         self.key_bind_map = key_bind_map
-
         if self.key_bind_map is None:
             self.key_bind_map = dict()
-            self.key_bind_map[tuple("o")] = SoundEntry("x1.wav")
-            self.key_bind_map[tuple("p")] = SoundEntry("x2.wav")
+            self.key_bind_map[tuple(["o"])] = SoundEntry("x1.wav")
+            self.key_bind_map[tuple(["p"])] = SoundEntry("x2.wav")
+            self.key_bind_map[tuple(["oem_4"])] = SoundEntry("x3.wav")
+
+    # def addSoundEntry(self, soundEntry):
+    #     soundEntry.
+
+    def addSoundEntryies(self, soundEntries):
+        for soundEntry in soundEntries:
+            self.addSoundEntry(soundEntry)
+
 
 class SoundEntry:
     def __init__(self, path_to_sound, frames=None, modifier_keys=[], activation_key="", is_playing=False, continue_playing=True, pitch_modifier=1.0):
@@ -22,6 +29,14 @@ class SoundEntry:
         self.continue_playing = continue_playing
         self.pitch_modifier = pitch_modifier
         self.p = pyaudio.PyAudio()
+        self.stream_in_use = False
+
+        self.mark_frame_index = False
+        self.jump_to_marked_frame_index = True
+        self.marked_frame_index = 0
+
+        if self.frames is None:
+            self.frames = Audio_Utils.getFramesFromFile(self.path_to_sound)
 
         self.stream = self.p.open(
             format=pyaudio.paInt16,
@@ -32,20 +47,27 @@ class SoundEntry:
             output=True
         )
 
-        if self.frames is None:
-            self.frames = Audio_Utils.getFramesFromFile(self.path_to_sound)
-
     def play(self):
         self.is_playing = True
         self.continue_playing = True
 
+        frame_index = 0
+        while frame_index < len(self.frames) and self.continue_playing:
+            if self.mark_frame_index:
+                self.marked_frame_index = frame_index
+                self.mark_frame_index = False
+            elif self.jump_to_marked_frame_index:
+                frame_index = self.marked_frame_index
+                self.jump_to_marked_frame_index = False
 
+            self.stream_in_use = True
+            self.stream.write(self.frames[frame_index])
+            self.stream_in_use = False
 
-        for frame in self.frames:
-            if self.continue_playing:
-                self.stream.write(frame)
+            frame_index += 1
 
         self.is_playing = False
+
 
     def stop(self):
         self.continue_playing = False

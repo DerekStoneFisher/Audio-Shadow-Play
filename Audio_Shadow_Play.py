@@ -2,6 +2,7 @@ import Sound
 import threading
 import time
 import thread
+from KeyPress import KeyPressManager, SoundBoardState
 
 
 import pyaudio
@@ -30,18 +31,35 @@ record_end = None
 keys_down = []
 last_keys_down = []
 keyToExtendedSoundMap = dict()
-hold_to_play = True
+hold_to_play = False
 
-def updateKeysDown(event):
-    global last_keys_down, keys_down
+restart_after_stopping = True
+restart_after_stopping_key = "tab"
+
+mark_frame_index_of_last_sound = False
+mark_frame_index_of_last_sound_key = "oem_3"
+jump_to_frame_index_of_last_sound = False
+jump_to_frame_index_of_last_sound_key = "q"
+move_marked_frame_forward_key = "up"
+move_marked_frame_backward_key = "down"
+
+set_of_keys_to_ignore = {restart_after_stopping_key, mark_frame_index_of_last_sound_key, jump_to_frame_index_of_last_sound_key}
+
+last_sound_entry = None
+
+
+def updateLastKeysDown():
+    global last_keys_down
     last_keys_down = []
     for key in keys_down:
         last_keys_down.append(key)
 
+def updateKeysDown(event):
+    global keys_down
     key = str(event.Key).lower()
     if "down" in event.MessageName and key not in keys_down:
         keys_down.append(key)
-    if "up" in event.MessageName:
+    if "up" in event.MessageName and key not in set_of_keys_to_ignore:
         keys_down.remove(key)
 
 def secondsToFrames(seconds):
@@ -53,26 +71,63 @@ def framesToSeconds(frames):
 
 soundExample1 = Sound.SoundEntry("x1.wav")
 soundCollection = Sound.SoundCollection()
+soundBoardState = SoundBoardState()
+keyPressManager = KeyPressManager(soundBoardState)
 
 def runpyHookThread():
     def OnKeyboardEvent(event):
-        global frames, cached_frames, extended_cache, keys_down, record_start, record_end, hold_to_play
+        global frames, cached_frames, extended_cache, keys_down, record_start, record_end, hold_to_play, restart_after_stopping,\
+        mark_frame_index_of_last_sound, mark_frame_index_of_last_sound_key, jump_to_frame_index_of_last_sound, jump_to_frame_index_of_last_sound_key,\
+        last_sound_entry, move_marked_frame_backward_key, move_marked_frame_forward_key, keyPressManager
+
+        keyPressManager.processKeyEvent(event)
+        updateLastKeysDown()
         updateKeysDown(event)
+        if len(keys_down) == 1:
+            if keys_down[0] == restart_after_stopping_key:
+                del(keys_down[0])
+                restart_after_stopping = False
+            elif keys_down[0] == mark_frame_index_of_last_sound_key:
+                del(keys_down[0])
+                last_sound_entry.mark_frame_index = True
+            elif keys_down[0] == jump_to_frame_index_of_last_sound_key:
+                del(keys_down[0])
+                last_sound_entry.jump_to_marked_frame_index = True
+
+        if last_sound_entry is not None:
+            print last_sound_entry.path_to_sound
+            print last_sound_entry.mark_frame_index, last_sound_entry.jump_to_marked_frame_index
+                
+                
 
         if keys_down != last_keys_down:
             print keys_down
             keys_down_tuple = tuple(keys_down)
             last_keys_down_tuple = tuple(last_keys_down)
-
+            
+            
+            if mark_frame_index_of_last_sound:
+                last_sound_entry.mark_frame_index = True
+            if jump_to_frame_index_of_last_sound:
+                last_sound_entry.jump_to_marked_frame_index = True
+            if len(keys_down) == 1 and keys_down[0] == move_marked_frame_backward_key and last_sound_entry is not None: # if down pressed, move marked frame back by .1 sec
+                last_sound_entry.marked_frame_index = max(0, last_sound_entry.marked_frame_index-secondsToFrames(.2))
+            if len(keys_down) == 1 and keys_down[0] == move_marked_frame_forward_key and last_sound_entry is not None: # if up pressed, move marked frame forward by .1 sec
+                last_sound_entry.marked_frame_index = max(0, last_sound_entry.marked_frame_index+secondsToFrames(.2))
+            
             if keys_down_tuple in soundCollection.key_bind_map: # if the bind for a sound was pressed
                 sound_entry = soundCollection.key_bind_map[keys_down_tuple]
-                print sound_entry.path_to_sound
+                last_sound_entry = sound_entry
                 if not sound_entry.is_playing: # start playing it if it not playing
                     thread.start_new_thread(sound_entry.play, tuple())
                 elif not hold_to_play: # stop playing it if hold_to_play is off and the key was let go
                     thread.start_new_thread(sound_entry.stop, tuple())
-                    time.sleep(.03)
-                    thread.start_new_thread(sound_entry.play, tuple())
+                    if restart_after_stopping: # only start playing the sound over again if restart_after_stopping is true
+                        while sound_entry.stream_in_use: # wait for the sound_entry to finish outputting its current chunk to the stream if it is in the middle of doing so
+                            time.sleep(.001)
+                        thread.start_new_thread(sound_entry.play, tuple())
+                    else:
+                        restart_after_stopping = True # toggling restart_after_stopping off only lasts for one sound-key-press
             elif hold_to_play and last_keys_down_tuple in soundCollection.key_bind_map: # if hold to play is on and we just let go of the key for a sound
                 sound_entry = soundCollection.key_bind_map[last_keys_down_tuple]
                 thread.start_new_thread(sound_entry.stop, tuple())
