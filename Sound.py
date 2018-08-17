@@ -1,5 +1,7 @@
 import Audio_Utils
 import pyaudio
+import json
+from Audio_Proj_Const import KEY_ID_TO_NAME_MAP
 
 
 
@@ -12,19 +14,43 @@ class SoundCollection:
             self.key_bind_map[tuple(["p"])] = SoundEntry("x2.wav")
             self.key_bind_map[tuple(["oem_4"])] = SoundEntry("x3.wav")
 
-    # def addSoundEntry(self, soundEntry):
-    #     soundEntry.
+    def ingestSoundboardJsonConfigFile(self, config_file_path):
+        with open(config_file_path) as config_file:
+            config_object = json.load(config_file)
+            soundboard_entries = config_object["soundboardEntries"]
+            for soundboard_entry in soundboard_entries:
+                path_to_sound_file = soundboard_entry["file"]
+                activation_key_codes = soundboard_entry["activationKeysNumbers"]
+                activation_key_names = [KEY_ID_TO_NAME_MAP[key_code].lower() for key_code in activation_key_codes]
+                soundEntry_to_add = SoundEntry(path_to_sound_file, activation_keys=activation_key_names)
+                self.key_bind_map[tuple(activation_key_names)] = soundEntry_to_add
 
-    def addSoundEntryies(self, soundEntries):
+
+    def addSoundEntry(self, soundEntry):
+        copy = tuple(soundEntry.activation_keys)
+        self.key_bind_map[copy] = soundEntry
+
+    def stopAllSounds(self):
+        for soundEntry in self.key_bind_map.values():
+            soundEntry.stop()
+
+    def resetAllPitches(self):
+        for soundEntry in self.key_bind_map.values():
+            soundEntry.pitch_modifier = 0
+
+    def shiftAllPitches(self, shift_amount):
+        for soundEntry in self.key_bind_map.values():
+            soundEntry.pitch_modifier += shift_amount
+
+    def addSoundEntries(self, soundEntries):
         for soundEntry in soundEntries:
             self.addSoundEntry(soundEntry)
 
 
 class SoundEntry:
-    def __init__(self, path_to_sound, frames=None, modifier_keys=[], activation_key="", is_playing=False, continue_playing=True, pitch_modifier=0):
+    def __init__(self, path_to_sound, frames=None, activation_keys=[], is_playing=False, continue_playing=True, pitch_modifier=0):
         self.path_to_sound = path_to_sound
-        self.modifier_keys = modifier_keys,
-        self.activation_key = activation_key,
+        self.activation_keys = activation_keys,
         self.frames = frames
         self.is_playing = is_playing
         self.continue_playing = continue_playing
@@ -86,14 +112,16 @@ class SoundEntry:
         if state.jump_to_frame_index_of_last_sound:
             print "jump_to_marked_frame_index pt2"
             self.jump_to_marked_frame_index = True
+            if not self.is_playing:
+                self.play()
             state.jump_to_frame_index_of_last_sound = False
         if state.move_marked_frame_forward: # if down pressed, move marked frame back by .1 sec
             print "marked_frame_index pt2"
-            self.marked_frame_index = max(0, self.marked_frame_index-Audio_Utils.secondsToFrames(.2)) # shift back in frames by .2 seconds. used max() with 0 to not get out of bounds error
+            self.marked_frame_index = max(0, self.marked_frame_index-Audio_Utils.secondsToFrames(.1)) # shift back in frames by .2 seconds. used max() with 0 to not get out of bounds error
             state.move_marked_frame_forward = False
         if state.move_marked_frame_backward:
             print "marked_frame_index pt2"
-            self.marked_frame_index = max(0, self.marked_frame_index+Audio_Utils.secondsToFrames(.2))
+            self.marked_frame_index = max(0, self.marked_frame_index+Audio_Utils.secondsToFrames(.1))
             state.move_marked_frame_backward = False
         if state.pitch_shift_up:
             print "pitch_shift_up pt2"

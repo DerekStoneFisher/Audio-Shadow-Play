@@ -3,6 +3,7 @@ import threading
 import time
 import thread
 from KeyPress import KeyPressManager, SoundBoardState
+from pyHook.HookManager import KeyboardEvent, HookConstants
 
 
 import pyaudio
@@ -31,25 +32,14 @@ record_end = None
 keyToExtendedSoundMap = dict()
 
 
-def updateLastKeysDown():
-    global last_keys_down
-    last_keys_down = []
-    for key in keys_down_tuple:
-        last_keys_down.append(key)
-
-def updateKeysDown(event):
-    global keys_down_tuple
-    key = str(event.Key).lower()
-    if "down" in event.MessageName and key not in keys_down_tuple:
-        keys_down_tuple.append(key)
-    if "up" in event.MessageName and key not in set_of_keys_to_ignore:
-        keys_down_tuple.remove(key)
 
 
-soundExample1 = Sound.SoundEntry("x1.wav")
 soundCollection = Sound.SoundCollection()
+soundCollection.ingestSoundboardJsonConfigFile("C:/Users/C17050/Documents/default soundboard.json")
+for key_bind in soundCollection.key_bind_map:
+    print key_bind, soundCollection.key_bind_map[key_bind]
 soundBoardState = SoundBoardState()
-keyPressManager = KeyPressManager(soundBoardState)
+keyPressManager = KeyPressManager(soundBoardState, soundCollection)
 sound_entry = None
 
 def runpyHookThread():
@@ -59,18 +49,16 @@ def runpyHookThread():
         move_marked_frame_backward_key, move_marked_frame_forward_key, keyPressManager, sound_entry
 
         keyPressManager.processKeyEvent(event)
-        #updateLastKeysDown()
-        # updateKeysDown(event)
-        # if len(keys_down) == 1:
-        #     if keys_down[0] == restart_after_stopping_key:
-        #         del(keys_down[0])
-        #         restart_after_stopping = False
-        #     elif keys_down[0] == mark_frame_index_of_last_sound_key:
-        #         del(keys_down[0])
-        #         last_sound_entry.mark_frame_index = True
-        #     elif keys_down[0] == jump_to_frame_index_of_last_sound_key:
-        #         del(keys_down[0])
-        #         last_sound_entry.jump_to_marked_frame_index = True
+
+        if keyPressManager.endingKeysEqual(["return"]):
+            soundCollection.stopAllSounds()
+        if keyPressManager.endingKeysEqual(["left"]):
+            keyPressManager.soundCollection.shiftAllPitches(-.1)
+        if keyPressManager.endingKeysEqual(["right"]):
+            soundCollection.shiftAllPitches(.1)
+        if keyPressManager.endingKeysEqual(["left", "right"]):
+            soundCollection.resetAllPitches()
+
 
                 
                 
@@ -83,8 +71,7 @@ def runpyHookThread():
 
 
             if sound_entry is not None:
-                sound_entry.updateFromState(state)
-
+                thread.start_new_thread(sound_entry.updateFromState, tuple([state]))
             
             if keys_down_tuple in soundCollection.key_bind_map: # if the bind for a sound was pressed
                 sound_entry = soundCollection.key_bind_map[keys_down_tuple]
@@ -106,9 +93,9 @@ def runpyHookThread():
 
 
             if len(keys_down_tuple) >= 2:
-                if keys_down_tuple[0] == "lmenu" and keys_down_tuple[1] == "pause":
+                if keys_down_tuple[0] == "menu" and keys_down_tuple[1] == "pause":
                     sys.exit()
-                elif keys_down_tuple[0] == "lmenu" and keys_down_tuple[1] == "x":
+                elif keys_down_tuple[0] == "menu" and keys_down_tuple[1] == "x":
                     if record_start is None: # if we aren't already recording
                         record_start = len(frames)-1 # save index of current frame
                         print "start recording at " + Audio_Utils.framesToSeconds(record_start) + "s in frame buffer of size " + Audio_Utils.framesToSeconds(len(frames)) + "s"

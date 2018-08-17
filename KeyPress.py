@@ -1,4 +1,4 @@
-
+from Audio_Proj_Const import NAME_OVERRIDE_LIST
 
 KEY_STATE_QUEUE_MAX_SIZE = 5
 
@@ -25,10 +25,13 @@ class SoundBoardState:
         self.move_marked_frame_backward_combination = {"down"}
 
         self.pitch_shift_up = False
-        self.pitch_shift_up_combination = {"right"}
+        self.pitch_shift_up_combination = {"shift","right"}
 
         self.pitch_shift_down = False
-        self.pitch_shift_down_combination = {"left"}
+        self.pitch_shift_down_combination = {"shift","left"}
+
+        self.stop_all_sounds = False
+        self.stop_all_sounds_combination = {"return"}
 
         self.complete_combination_list = \
             tuple([self.hold_to_play_combination, self.restart_after_stopping_combination,
@@ -40,7 +43,8 @@ class SoundBoardState:
 
 
 class KeyPressManager:
-    def __init__(self, soundBoardState):
+    def __init__(self, soundBoardState, soundCollection):
+        self.soundCollection = soundCollection
         self.soundBoardState = soundBoardState
         self._key_state_queue = [[],[],[],[],[]]
         self.keys_to_ignore = []
@@ -48,26 +52,31 @@ class KeyPressManager:
 
     def processKeyEvent(self, key_event):
         key = str(key_event.Key).lower()
-        keys_down = self.getKeysDown()
+        if key in NAME_OVERRIDE_LIST:
+            key = NAME_OVERRIDE_LIST[key]
 
+
+
+        keys_down = list(self.getKeysDown())
 
         if "down" in key_event.MessageName and key not in keys_down:
             keys_down.append(key)
         if "up" in key_event.MessageName and key not in self.soundBoardState.complete_combination_list:
             keys_down.remove(key)
 
+
         regular_keys, config_keys = self.splitKeysDownIntoRegularAndConfig(keys_down)
         self.updateSoundboardState()
 
-        if len(config_keys) > 0:
-            print "regualr and config -------> ", regular_keys, config_keys
+        #if len(config_keys) > 0:
+        #    print "regualr and config -------> ", regular_keys, config_keys
 
         if keys_down != self.getKeysDown():
             self.key_state_changed = True
             self._key_state_queue.append(keys_down)
             if len(self._key_state_queue) > KEY_STATE_QUEUE_MAX_SIZE:
                 del(self._key_state_queue[0])
-            print self._key_state_queue
+            #print self._key_state_queue
         else:
             self.key_state_changed = False
 
@@ -106,10 +115,8 @@ class KeyPressManager:
         elif self.combinationPressed(self.soundBoardState.move_marked_frame_backward_combination):
             self.soundBoardState.move_marked_frame_forward = True
         elif self.combinationPressed(self.soundBoardState.pitch_shift_up_combination):
-            print "pitch up"
             self.soundBoardState.pitch_shift_up = True
         elif self.combinationPressed(self.soundBoardState.pitch_shift_down_combination):
-            print "pitch down"
             self.soundBoardState.pitch_shift_down = True
 
     def combinationPressed(self, key_combination):
@@ -169,6 +176,10 @@ class KeyPressManager:
     def getKeysDown(self):
         return list(self._key_state_queue[-1])
 
+    def getRegularKeysDown(self):
+        regular_keys, control_keys = self.splitKeysDownIntoRegularAndConfig(self.getKeysDown())
+        return regular_keys
+
     def getLastKeysDown(self):
         return list(self._key_state_queue[-2])
 
@@ -179,3 +190,10 @@ class KeyPressManager:
     #
     # def getActivationKeysDown(self):
     #     return set([key for key in self.getKeysDown() if key not in self.modifier_key_set])
+
+    def endingKeysEqual(self, ending_keys):
+        keys_down = list(self.getKeysDown())
+        if len(keys_down) < len(ending_keys):
+            return False
+        else: # check to see if last n keys of keys_down are equal to equal_keys where n is the length of ending_keys
+            return set(keys_down[-len(ending_keys):]) == set(ending_keys)

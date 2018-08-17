@@ -24,7 +24,7 @@ def writeFramesToFile(frames, filename, normalize=True):
         normalizeAudioFile(filename)
 
 
-def getFramesFromFile(filename):
+def getFramesFromFile(filename, normalize=False):
     if os.path.exists(filename):
         wf = wave.open(filename, 'rb')
         frames = []
@@ -36,14 +36,7 @@ def getFramesFromFile(filename):
     else:
         print "error: cannot write file to frames because file does not exist\tfilename=" + str(filename)
 
-def normalizeAudioFile(filename, target_dBFS=-20.0):
-    def match_target_amplitude(sound, target_dBFS):
-        change_in_dBFS = target_dBFS - sound.dBFS
-        return sound.apply_gain(change_in_dBFS)
 
-    sound = AudioSegment.from_file(filename, "wav")
-    normalized_sound = match_target_amplitude(sound, target_dBFS)
-    normalized_sound.export(filename, format="wav")
 
 def copyfileToBackupFolder(filename, folder=None):
     if folder == None:
