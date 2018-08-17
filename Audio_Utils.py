@@ -1,4 +1,5 @@
 from pydub import AudioSegment
+import pydub.playback
 import wave
 import os
 import shutil
@@ -118,16 +119,15 @@ def getIndexOfSpeakers():
     p = pyaudio.PyAudio()
     return p.get_default_output_device_info()
 
-# def getPitchShiftedFrame(frame):
-#     sample_width = pyaudio.PyAudio().get_sample_size(pyaudio.paInt16)
-#     sound = AudioSegment(frame, sample_width=sample_width, frame_rate=44100, channels=2)
-#
-#     # shift the pitch down by half an octave (speed will decrease proportionally)
-#     octaves = -0.5
-#
-#     new_sample_rate = int(sound.frame_rate * (2.0 ** octaves))
-#     lowpitch_sound = sound._spawn(sound.raw_data, overrides={'frame_rate': new_sample_rate})
-#     return lowpitch_sound._
+def getPitchShiftedFrame(frame, octaves):
+    sample_width = pyaudio.PyAudio().get_sample_size(pyaudio.paInt16)
+    sound = AudioSegment(frame, sample_width=sample_width, frame_rate=44100, channels=2)
+
+    new_sample_rate = int(sound.frame_rate * (2.0 ** octaves))
+    lowpitch_sound = sound._spawn(sound.raw_data, overrides={'frame_rate': new_sample_rate})
+    lowpitch_sound = lowpitch_sound.set_frame_rate(44100)
+
+    return lowpitch_sound.raw_data
 
 
 

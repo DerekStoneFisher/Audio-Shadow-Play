@@ -2,6 +2,7 @@ import Audio_Utils
 import pyaudio
 
 
+
 class SoundCollection:
     def __init__(self, key_bind_map=None):
         self.key_bind_map = key_bind_map
@@ -20,7 +21,7 @@ class SoundCollection:
 
 
 class SoundEntry:
-    def __init__(self, path_to_sound, frames=None, modifier_keys=[], activation_key="", is_playing=False, continue_playing=True, pitch_modifier=1.0):
+    def __init__(self, path_to_sound, frames=None, modifier_keys=[], activation_key="", is_playing=False, continue_playing=True, pitch_modifier=0):
         self.path_to_sound = path_to_sound
         self.modifier_keys = modifier_keys,
         self.activation_key = activation_key,
@@ -62,7 +63,11 @@ class SoundEntry:
                 self.jump_to_marked_frame_index = False
 
             self.stream_in_use = True
-            self.stream.write(self.frames[frame_index])
+            current_frame = self.frames[frame_index]
+            current_frame = Audio_Utils.getPitchShiftedFrame(current_frame, self.pitch_modifier)
+            self.stream.write(current_frame)
+            #self.stream.write(self.frames[frame_index])
+
             self.stream_in_use = False
 
             frame_index += 1
@@ -90,6 +95,15 @@ class SoundEntry:
             print "marked_frame_index pt2"
             self.marked_frame_index = max(0, self.marked_frame_index+Audio_Utils.secondsToFrames(.2))
             state.move_marked_frame_backward = False
+        if state.pitch_shift_up:
+            print "pitch_shift_up pt2"
+            self.pitch_modifier += .1
+            state.pitch_shift_up = False
+        if state.pitch_shift_down:
+            print "pitch_shift_down pt2"
+            self.pitch_modifier -= .1
+            state.pitch_shift_down = False
+
 
 
 if __name__ == "__main__":
