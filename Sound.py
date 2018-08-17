@@ -44,7 +44,8 @@ class SoundEntry:
             rate=44100,
             input=True,
             frames_per_buffer=1024,
-            output=True
+            output=True,
+            output_device_index=2
         )
 
     def play(self):
@@ -74,13 +75,21 @@ class SoundEntry:
 
     def updateFromState(self, state):
         if state.mark_frame_index_of_last_sound:
+            print "mark_frame_index pt2"
             self.mark_frame_index = True
+            state.mark_frame_index_of_last_sound = False
         if state.jump_to_frame_index_of_last_sound:
+            print "jump_to_marked_frame_index pt2"
             self.jump_to_marked_frame_index = True
+            state.jump_to_frame_index_of_last_sound = False
         if state.move_marked_frame_forward: # if down pressed, move marked frame back by .1 sec
+            print "marked_frame_index pt2"
             self.marked_frame_index = max(0, self.marked_frame_index-Audio_Utils.secondsToFrames(.2)) # shift back in frames by .2 seconds. used max() with 0 to not get out of bounds error
+            state.move_marked_frame_forward = False
         if state.move_marked_frame_backward:
+            print "marked_frame_index pt2"
             self.marked_frame_index = max(0, self.marked_frame_index+Audio_Utils.secondsToFrames(.2))
+            state.move_marked_frame_backward = False
 
 
 if __name__ == "__main__":
