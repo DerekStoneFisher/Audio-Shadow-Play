@@ -2,7 +2,7 @@ import Audio_Utils
 import pyaudio
 import json
 from Audio_Proj_Const import KEY_ID_TO_NAME_MAP
-
+import random
 
 
 class SoundCollection:
@@ -19,10 +19,10 @@ class SoundCollection:
             config_object = json.load(config_file)
             soundboard_entries = config_object["soundboardEntries"]
             for soundboard_entry in soundboard_entries:
-                path_to_sound_file = soundboard_entry["file"]
+                path_to_sound = soundboard_entry["file"]
                 activation_key_codes = soundboard_entry["activationKeysNumbers"]
                 activation_key_names = [KEY_ID_TO_NAME_MAP[key_code].lower() for key_code in activation_key_codes]
-                soundEntry_to_add = SoundEntry(path_to_sound_file, activation_keys=activation_key_names)
+                soundEntry_to_add = SoundEntry(path_to_sound, activation_keys=activation_key_names)
                 self.key_bind_map[tuple(activation_key_names)] = soundEntry_to_add
 
 
@@ -64,6 +64,7 @@ class SoundEntry:
 
         if self.frames is None:
             self.frames = Audio_Utils.getFramesFromFile(self.path_to_sound)
+            self.frames = Audio_Utils.getNormalizedAudioFrames(self.frames, Audio_Utils.DEFAULT_DBFS)
 
         self.stream = self.p.open(
             format=pyaudio.paInt16,
@@ -104,34 +105,19 @@ class SoundEntry:
     def stop(self):
         self.continue_playing = False
 
-    def updateFromState(self, state):
-        if state.mark_frame_index_of_last_sound:
-            print "mark_frame_index pt2"
-            self.mark_frame_index = True
-            state.mark_frame_index_of_last_sound = False
-        if state.jump_to_frame_index_of_last_sound:
-            print "jump_to_marked_frame_index pt2"
-            self.jump_to_marked_frame_index = True
-            if not self.is_playing:
-                self.play()
-            state.jump_to_frame_index_of_last_sound = False
-        if state.move_marked_frame_forward: # if down pressed, move marked frame back by .1 sec
-            print "marked_frame_index pt2"
-            self.marked_frame_index = max(0, self.marked_frame_index-Audio_Utils.secondsToFrames(.1)) # shift back in frames by .2 seconds. used max() with 0 to not get out of bounds error
-            state.move_marked_frame_forward = False
-        if state.move_marked_frame_backward:
-            print "marked_frame_index pt2"
-            self.marked_frame_index = max(0, self.marked_frame_index+Audio_Utils.secondsToFrames(.1))
-            state.move_marked_frame_backward = False
-        if state.pitch_shift_up:
-            print "pitch_shift_up pt2"
-            self.pitch_modifier += .1
-            state.pitch_shift_up = False
-        if state.pitch_shift_down:
-            print "pitch_shift_down pt2"
-            self.pitch_modifier -= .1
-            state.pitch_shift_down = False
+    def moveMarkedFrameIndex(self, move_amount):
+        self.marked_frame_index = max(0, self.marked_frame_index+Audio_Utils.secondsToFrames(move_amount)) # shift back in frames by .2 seconds. used max() with 0 to not get out of bounds error
 
+    def markCurrentFrameIndex(self):
+        self.mark_frame_index = True # in the loop of the self.Play() method, we check to see if this is true. if it is true, we mark the current frame index and then set this back to false
+
+    def jumpToMarkedFrameIndex(self):
+        self.jump_to_marked_frame_index = True
+        if not self.is_playing:
+            self.play()
+
+    def shiftPitch(self, amount):
+        self.pitch_modifier += amount
 
 
 if __name__ == "__main__":

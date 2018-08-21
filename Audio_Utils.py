@@ -9,6 +9,8 @@ import pyaudio
 import numpy as np
 import io
 
+DEFAULT_DBFS = -20.0
+
 
 def writeFramesToFile(frames, filename, normalize=True):
     if os.path.exists(filename) and "Extended_Audio" not in filename:
@@ -18,13 +20,14 @@ def writeFramesToFile(frames, filename, normalize=True):
     wf.setnchannels(2)
     wf.setsampwidth(pyaudio.PyAudio().get_sample_size(pyaudio.paInt16))
     wf.setframerate(44100)
+    if normalize:
+        frames = getNormalizedAudioFrames(frames, DEFAULT_DBFS)
     wf.writeframes(b''.join(frames))
     wf.close()
-    if normalize:
-        normalizeAudioFile(filename)
 
 
-def getFramesFromFile(filename, normalize=False):
+
+def getFramesFromFile(filename):
     if os.path.exists(filename):
         wf = wave.open(filename, 'rb')
         frames = []
@@ -37,6 +40,19 @@ def getFramesFromFile(filename, normalize=False):
         print "error: cannot write file to frames because file does not exist\tfilename=" + str(filename)
 
 
+
+
+def getNormalizedAudioFrames(frames, target_dBFS):
+    sample_width = pyaudio.PyAudio().get_sample_size(pyaudio.paInt16)
+    sound = AudioSegment(b''.join(frames), sample_width=sample_width, frame_rate=44100, channels=2)
+    normalized_sound = getSoundWithMatchedAmplitude(sound, target_dBFS)
+    normalized_sound_as_bytestring = normalized_sound.raw_data
+    normalized_bytestream_as_frame_list = [normalized_sound_as_bytestring[i:i+1024] for i in range(0, len(normalized_sound_as_bytestring), 1024)] # slice bystestring into chunks of 1024 bytes
+    return normalized_bytestream_as_frame_list
+
+def getSoundWithMatchedAmplitude(sound, target_dBFS):
+    change_in_dBFS = target_dBFS - sound.dBFS
+    return sound.apply_gain(change_in_dBFS)
 
 def copyfileToBackupFolder(filename, folder=None):
     if folder == None:
@@ -124,19 +140,6 @@ def getPitchShiftedFrame(frame, octaves):
 
 
 
-    #Play pitch changed sound
-    #play(lowpitch_sound)
-
-    # frame_copy = frame
-    # sampleWidth = pyaudio.PyAudio().get_sample_size(pyaudio.paInt16)
-    # frame_copy = np.array(wave.struct.unpack("%dh" % (len(frame_copy) / sampleWidth), frame_copy)) * 2
-    #
-    # frame_copy = np.fft.rfft(frame_copy, 1)
-    # #MANipulation
-    # frame_copy = np.fft.irfft(frame_copy, 1)
-    # frame_out = np.array(frame_copy * 0.5, dtype='int16') #undo the *2 that was done at reading
-    # chunk_out = struct.pack("%dh"%(len(frame_out)), *list(frame_out)) #convert back to 16-bit data
-    # return chunk_out
 
 
 
