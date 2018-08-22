@@ -38,7 +38,7 @@ change_sound_entry_without_playing_it = False # we will set this to true when we
 soundCollection = Sound.SoundCollection()
 soundCollection.ingestSoundboardJsonConfigFile("Board1.json")
 for key_bind in soundCollection.key_bind_map:
-    print key_bind, soundCollection.key_bind_map[key_bind]
+    print key_bind, soundCollection.key_bind_map[key_bind].path_to_sound
 keyPressManager = KeyPressManager(soundCollection)
 
 # just grab any random sound so sound_entry doesn't start as null
@@ -86,7 +86,7 @@ def runpyHookThread():
             thread.start_new_thread(sound_entry.jumpToMarkedFrameIndex, tuple()) # need to call via a thread so we don't get blocked by the .play() which can get called by this function
         elif keyPressManager.endingKeysEqual(["1", "2"]):
             change_sound_entry_without_playing_it = True
-        elif keyPressManager.endingKeysEqual(["1", "5"]):
+        elif keyPressManager.endingKeysEqual(["1", "5"]) or keyPressManager.endingKeysEqual(["oem_3"]):
             sound_entry.stop() # no new thread needed
 
 

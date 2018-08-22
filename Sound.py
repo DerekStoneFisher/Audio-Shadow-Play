@@ -11,9 +11,6 @@ class SoundCollection:
         self.key_bind_map = key_bind_map
         if self.key_bind_map is None:
             self.key_bind_map = dict()
-            self.key_bind_map[frozenset(["o"])] = SoundEntry("x1.wav")
-            self.key_bind_map[frozenset(["p"])] = SoundEntry("x2.wav")
-            self.key_bind_map[frozenset(["oem_4"])] = SoundEntry("x3.wav")
             for number in "1234567890":
                 file_name = "x" + number + ".wav"
                 if os.path.exists(file_name):
@@ -71,7 +68,7 @@ class SoundEntry:
         self.jump_to_marked_frame_index = True
         self.marked_frame_index = 0
 
-        if self.frames is None:
+        if self.frames is None and os.path.exists(self.path_to_sound):
             self.frames = Audio_Utils.getFramesFromFile(self.path_to_sound)
             self.frames = Audio_Utils.getNormalizedAudioFrames(self.frames, Audio_Utils.DEFAULT_DBFS)
 
