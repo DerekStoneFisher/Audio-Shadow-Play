@@ -1,7 +1,8 @@
 import Audio_Utils
 import pyaudio
 import json
-from Audio_Proj_Const import KEY_ID_TO_NAME_MAP
+from Audio_Proj_Const import KEY_ID_TO_NAME_MAP, convertJavaKeyIDToRegularKeyID
+import os
 
 
 
@@ -10,20 +11,25 @@ class SoundCollection:
         self.key_bind_map = key_bind_map
         if self.key_bind_map is None:
             self.key_bind_map = dict()
-            self.key_bind_map[tuple(["o"])] = SoundEntry("x1.wav")
-            self.key_bind_map[tuple(["p"])] = SoundEntry("x2.wav")
-            self.key_bind_map[tuple(["oem_4"])] = SoundEntry("x3.wav")
+            self.key_bind_map[frozenset(["1", "next"])] = SoundEntry("im gay.wav")
+            self.key_bind_map[frozenset(["2", "next"])] = SoundEntry("bold brathas.wav")
+            self.key_bind_map[frozenset(["3", "next"])] = SoundEntry("BLOOD DRAGON.wav")
+            #self.key_bind_map[tuple(["oem_4"])] = SoundEntry("x3.wav")
 
     def ingestSoundboardJsonConfigFile(self, config_file_path):
         with open(config_file_path) as config_file:
             config_object = json.load(config_file)
             soundboard_entries = config_object["soundboardEntries"]
             for soundboard_entry in soundboard_entries:
-                path_to_sound_file = soundboard_entry["file"]
-                activation_key_codes = soundboard_entry["activationKeysNumbers"]
-                activation_key_names = [KEY_ID_TO_NAME_MAP[key_code].lower() for key_code in activation_key_codes]
-                soundEntry_to_add = SoundEntry(path_to_sound_file, activation_keys=activation_key_names)
-                self.key_bind_map[tuple(activation_key_names)] = soundEntry_to_add
+                try:
+                    path_to_sound_file = soundboard_entry["file"]
+                    activation_key_codes = soundboard_entry["activationKeysNumbers"]
+                    if os.path.exists(path_to_sound_file):
+                        activation_key_names = [KEY_ID_TO_NAME_MAP[convertJavaKeyIDToRegularKeyID(key_code)].lower() for key_code in activation_key_codes]
+                        soundEntry_to_add = SoundEntry(path_to_sound_file, activation_keys=activation_key_names)
+                        self.key_bind_map[frozenset(activation_key_names)] = soundEntry_to_add
+                except:
+                    print "failed to ingest", soundboard_entry["file"]
 
 
     def addSoundEntry(self, soundEntry):
@@ -72,7 +78,17 @@ class SoundEntry:
             input=True,
             frames_per_buffer=1024,
             output=True,
-            output_device_index=2
+            output_device_index=7
+        )
+
+        self.stream2 = self.p.open(
+            format=pyaudio.paInt16,
+            channels=2,
+            rate=44100,
+            input=True,
+            frames_per_buffer=1024,
+            output=True,
+            output_device_index=5
         )
 
     def play(self):
@@ -92,6 +108,7 @@ class SoundEntry:
             current_frame = self.frames[frame_index]
             current_frame = Audio_Utils.getPitchShiftedFrame(current_frame, self.pitch_modifier)
             self.stream.write(current_frame)
+            self.stream2.write(current_frame)
             #self.stream.write(self.frames[frame_index])
 
             self.stream_in_use = False
@@ -125,15 +142,15 @@ class SoundEntry:
             state.move_marked_frame_backward = False
         if state.pitch_shift_up:
             print "pitch_shift_up pt2"
-            self.pitch_modifier += .1
+            self.pitch_modifier += .2
             state.pitch_shift_up = False
         if state.pitch_shift_down:
             print "pitch_shift_down pt2"
-            self.pitch_modifier -= .1
+            self.pitch_modifier -= .2
             state.pitch_shift_down = False
 
 
 
 if __name__ == "__main__":
-    sound = SoundEntry("x1.wav")
+    sound = SoundEntry("im gay.wav")
     sound.play()

@@ -25,16 +25,19 @@ def writeFramesToFile(frames, filename, normalize=True):
 
 
 def getFramesFromFile(filename, normalize=False):
-    if os.path.exists(filename):
-        wf = wave.open(filename, 'rb')
-        frames = []
-        frame = wf.readframes(1024)
-        while frame != '':
-            frames.append(frame)
+    try:
+        if os.path.exists(filename):
+            wf = wave.open(filename, 'rb')
+            frames = []
             frame = wf.readframes(1024)
-        return frames
-    else:
-        print "error: cannot write file to frames because file does not exist\tfilename=" + str(filename)
+            while frame != '':
+                frames.append(frame)
+                frame = wf.readframes(1024)
+            return frames
+        else:
+            print "error: cannot write file to frames because file does not exist\tfilename=" + str(filename)
+    except:
+        print "failed to get frames from file", filename
 
 
 

@@ -35,9 +35,9 @@ keyToExtendedSoundMap = dict()
 
 
 soundCollection = Sound.SoundCollection()
-soundCollection.ingestSoundboardJsonConfigFile("C:/Users/C17050/Documents/default soundboard.json")
+soundCollection.ingestSoundboardJsonConfigFile("Board1.json")
 for key_bind in soundCollection.key_bind_map:
-    print key_bind, soundCollection.key_bind_map[key_bind]
+    print key_bind, soundCollection.key_bind_map[key_bind].path_to_sound
 soundBoardState = SoundBoardState()
 keyPressManager = KeyPressManager(soundBoardState, soundCollection)
 sound_entry = None
@@ -53,18 +53,20 @@ def runpyHookThread():
         if keyPressManager.endingKeysEqual(["return"]):
             soundCollection.stopAllSounds()
         if keyPressManager.endingKeysEqual(["left"]):
-            keyPressManager.soundCollection.shiftAllPitches(-.1)
+            #keyPressManager.soundCollection.shiftAllPitches(-.1)
+            if sound_entry is not None:
+                sound_entry.pitch_modifier += -.1
         if keyPressManager.endingKeysEqual(["right"]):
-            soundCollection.shiftAllPitches(.1)
+            #soundCollection.shiftAllPitches(.1)
+            if sound_entry is not None:
+                sound_entry.pitch_modifier += .1
         if keyPressManager.endingKeysEqual(["left", "right"]):
             soundCollection.resetAllPitches()
 
 
-                
-                
-
         if keyPressManager.key_state_changed:
             keys_down_tuple = tuple(keyPressManager.getKeysDown())
+            print keys_down_tuple
             last_keys_down_tuple = tuple(keyPressManager.getLastKeysDown())
 
             state = keyPressManager.soundBoardState
@@ -72,9 +74,9 @@ def runpyHookThread():
 
             if sound_entry is not None:
                 thread.start_new_thread(sound_entry.updateFromState, tuple([state]))
-            
-            if keys_down_tuple in soundCollection.key_bind_map: # if the bind for a sound was pressed
-                sound_entry = soundCollection.key_bind_map[keys_down_tuple]
+
+            if frozenset(keys_down_tuple) in soundCollection.key_bind_map: # if the bind for a sound was pressed
+                sound_entry = soundCollection.key_bind_map[frozenset(keys_down_tuple)]
                 if not sound_entry.is_playing: # start playing it if it not playing
                     thread.start_new_thread(sound_entry.play, tuple())
                 elif not state.hold_to_play: # stop playing it if hold_to_play is off and the key was let go
