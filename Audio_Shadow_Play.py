@@ -46,14 +46,23 @@ sound_entry = next(iter(soundCollection.key_bind_map.values())) # type: Sound.So
 previous_sound_entry = sound_entry
 pause_soundboard = False
 
+pitch_modifiers = {'1':-.5, '2':-.4, '3':-.3, '4':-.2, '5':-.1, '6':0, '7':.1, '8':.2, '9':.3, '0':.4}
+
 def runpyHookThread():
     def OnKeyboardEvent(event):
-        global frames, cached_frames, extended_cache, record_start, record_end, hold_to_play, restart_instead_of_stop, keyPressManager, sound_entry, change_sound_entry_without_playing_it, previous_sound_entry, pause_soundboard
+        global frames, cached_frames, extended_cache, record_start, record_end, hold_to_play, restart_instead_of_stop, keyPressManager, sound_entry, change_sound_entry_without_playing_it, previous_sound_entry, pause_soundboard, pitch_modifiers
 
         keyPressManager.processKeyEvent(event)
+        keys_down_tuple = tuple(keyPressManager.getKeysDown())
+        last_keys_down_tuple = tuple(keyPressManager.getLastKeysDown())
+
+
+        if len(keys_down_tuple) >= 2 and keys_down_tuple[0] == "menu" and keys_down_tuple[-1] in pitch_modifiers:
+            sound_entry.pitch_modifier = pitch_modifiers[keys_down_tuple[-1]]
+            thread.start_new_thread(sound_entry.jumpToMarkedFrameIndex, tuple()) # need to call via a thread so we don't get blocked by the .play() which can get called by this function
 
         # key binds that affect all sounds in the sound collection
-        if keyPressManager.endingKeysEqual(["return"]): # enter -> stop all currently playing sounds
+        elif keyPressManager.endingKeysEqual(["return"]): # enter -> stop all currently playing sounds
             soundCollection.stopAllSounds()
         elif keyPressManager.endingKeysEqual(["left", "right"]): # left + right -> reset pitch of all sounds
             soundCollection.resetAllPitches()
@@ -75,6 +84,8 @@ def runpyHookThread():
         elif keyPressManager.endingKeysEqual(["1","2","3"]):
             hold_to_play = not hold_to_play
 
+
+
         # key binds that affect the last sound played
         elif keyPressManager.endingKeysEqual(["up"]):
             sound_entry.moveMarkedFrameIndex(.1)
@@ -91,8 +102,7 @@ def runpyHookThread():
 
 
         if keyPressManager.key_state_changed and not pause_soundboard:
-            keys_down_tuple = tuple(keyPressManager.getKeysDown())
-            last_keys_down_tuple = tuple(keyPressManager.getLastKeysDown())
+
 
 
             if change_sound_entry_without_playing_it: # special case that prevents sound entry from getting played

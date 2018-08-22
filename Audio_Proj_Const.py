@@ -574,10 +574,11 @@ JAVA_KEY_NAMES = {
 def convertJavaKeyIDToRegularKeyID(java_key_id):
     java_to_regular = {
         44: 188,  # comma -> Snapshot
-        155: 45,  # insert -> insert
+        155: 45,  # minus -> insert
         45: 189,  # insert -> minus
         92: 220,  # back slash -> Rwin
         91: 219,  # open bracket -> Lwin
+        93: 221,  # ??? -> close bracket
         61: 187,  # equals ->
         46: 190,  # period -> Delete
         59: 186,  # semicolon ->
