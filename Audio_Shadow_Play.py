@@ -58,13 +58,13 @@ def runpyHookThread():
         elif keyPressManager.endingKeysEqual(["left", "right"]): # left + right -> reset pitch of all sounds
             soundCollection.resetAllPitches()
         elif keyPressManager.endingKeysEqual(["menu", "left"]): # alt + left -> shift down pitch of currently playing sound
-            sound_entry.shiftPitch(-.1)
-        elif keyPressManager.endingKeysEqual(["menu", "right"]): # alt + right (insert trump joke here xd) -> shift down pitch of currently playing sound
-            sound_entry.shiftPitch(.1)
-        elif keyPressManager.endingKeysEqual(["left"]): # left (without alt) -> shift down pitch of all sounds
             soundCollection.shiftAllPitches(-.1)
-        elif keyPressManager.endingKeysEqual(["right"]): # right (without alt) -> shift up pitch of all sounds
+        elif keyPressManager.endingKeysEqual(["menu", "right"]): # alt + right (insert trump joke here xd) -> shift down pitch of currently playing sound
             soundCollection.shiftAllPitches(.1)
+        elif keyPressManager.endingKeysEqual(["left"]): # left (without alt) -> shift down pitch of all sounds
+            sound_entry.shiftPitch(-.1)
+        elif keyPressManager.endingKeysEqual(["right"]): # right (without alt) -> shift up pitch of all sounds
+            sound_entry.shiftPitch(.1)
 
         # non-sound specific configuration key binds
         elif keyPressManager.endingKeysEqual(["2","3","4"]):
@@ -86,21 +86,25 @@ def runpyHookThread():
             thread.start_new_thread(sound_entry.jumpToMarkedFrameIndex, tuple()) # need to call via a thread so we don't get blocked by the .play() which can get called by this function
         elif keyPressManager.endingKeysEqual(["1", "2"]):
             change_sound_entry_without_playing_it = True
-
+        elif keyPressManager.endingKeysEqual(["1", "5"]):
+            sound_entry.stop() # no new thread needed
 
 
         if keyPressManager.key_state_changed and not pause_soundboard:
             keys_down_tuple = tuple(keyPressManager.getKeysDown())
-            print keys_down_tuple
             last_keys_down_tuple = tuple(keyPressManager.getLastKeysDown())
 
 
             if change_sound_entry_without_playing_it: # special case that prevents sound entry from getting played
-                sound_entry = previous_sound_entry # change the current sound_entry to the previous one
+                sound_entry, previous_sound_entry = previous_sound_entry, sound_entry # swap
                 change_sound_entry_without_playing_it = False
-            elif keys_down_tuple in soundCollection.key_bind_map: # if the bind for a sound was pressed
-                previous_sound_entry = sound_entry
-                sound_entry = soundCollection.key_bind_map[keys_down_tuple]
+            elif frozenset(keys_down_tuple) in soundCollection.key_bind_map: # if the bind for a sound was pressed
+                temp_previous_sound_entry = sound_entry
+                sound_entry = soundCollection.key_bind_map[frozenset(keys_down_tuple)]
+                if temp_previous_sound_entry.path_to_sound != sound_entry.path_to_sound:
+                    previous_sound_entry = temp_previous_sound_entry
+
+
                 if not sound_entry.is_playing: # start playing it if it not playing
                     thread.start_new_thread(sound_entry.play, tuple())
                 elif not hold_to_play: # stop playing it if hold_to_play is off and the key was let go
@@ -113,8 +117,8 @@ def runpyHookThread():
                         thread.start_new_thread(sound_entry.play, tuple())
                     else:
                         restart_instead_of_stop = True # toggling restart_after_stopping off only lasts for one sound-key-press
-            elif hold_to_play and last_keys_down_tuple in soundCollection.key_bind_map: # if hold to play is on and we just let go of the key for a sound
-                sound_entry = soundCollection.key_bind_map[last_keys_down_tuple]
+            elif hold_to_play and frozenset(last_keys_down_tuple) in soundCollection.key_bind_map: # if hold to play is on and we just let go of the key for a sound
+                sound_entry = soundCollection.key_bind_map[frozenset(last_keys_down_tuple)]
                 thread.start_new_thread(sound_entry.stop, tuple())
 
 
@@ -125,17 +129,19 @@ def runpyHookThread():
                     if record_start is None: # if we aren't already recording
                         record_start = len(frames)-1 # save index of current frame
                         print "start recording at " + Audio_Utils.framesToSeconds(record_start) + "s in frame buffer of size " + Audio_Utils.framesToSeconds(len(frames)) + "s"
-                    else: # if we are already recording
+                    else: # if x was pressed and we are already recording
                         time.sleep(.25)
                         record_end = len(frames)-1 # save index of where we stopped recording
-                        Audio_Utils.writeFramesToFile(frames[record_start:record_end], "x.wav")
+                        Audio_Utils.writeFramesToFile(frames[record_start:record_end], "x.wav", True)
                         print "stopped recording. recorded from " + str(Audio_Utils.framesToSeconds(record_start)) + "s to " + str(Audio_Utils.framesToSeconds(record_end)) + "s. Total recording size is " + Audio_Utils.framesToSeconds(record_end-record_start) + "s. total frame size so far is " + str(Audio_Utils.framesToSeconds(len(frames))) + "s"
                         record_start = None
                         record_end = None
                 elif keys_down_tuple[0] in "1234567890" and keys_down_tuple[1] == "end":
                     new_file_name = "x" + keys_down_tuple[0] + ".wav"
                     shutil.copyfile("x.wav", new_file_name)
+                    soundCollection.key_bind_map[frozenset([keys_down_tuple[0], "next"])] = Sound.SoundEntry(new_file_name)
                     subprocess.Popen(["audacity.exe", new_file_name], executable="D:/Program Files (x86)/Audacity/audacity.exe")
+
         return True
 
 
@@ -148,6 +154,47 @@ def runpyHookThread():
         pythoncom.PumpMessages()
     except KeyboardInterrupt:
         pass
+
+
+# def processKeyBoardStateHoldToPlay(keys_down_tuple, last_keys_down_tuple):
+#         matches_found = 0
+#         print last_keys_down_tuple, keys_down_tuple
+#         global frames, cached_frames, extended_cache, record_start, record_end, hold_to_play, restart_instead_of_stop, keyPressManager, sound_entry, change_sound_entry_without_playing_it, previous_sound_entry, pause_soundboard
+#
+#
+#
+#         for key in keys_down_tuple:
+#             if tuple([key]) in soundCollection.key_bind_map: # if the bind for a sound was pressed
+#                 previous_sound_entry = sound_entry
+#                 sound_entry = soundCollection.key_bind_map[tuple([key])]
+#                 if not sound_entry.is_playing: # start playing it if it not playing
+#                     thread.start_new_thread(sound_entry.play, tuple())
+#                     matches_found+=1
+#         #
+#         # for key_bind_tuple in soundCollection.key_bind_map:
+#         #     common_keys = list(set(key_bind_tuple).intersection(keys_down_tuple))
+#         #     if len(common_keys) > 1:
+#         #
+#         #
+#         #         sound_entry = soundCollection.key_bind_map[tuple([key])]
+#         #         if not sound_entry.is_playing: # start playing it if it not playing
+#         #             thread.start_new_thread(sound_entry.play, tuple())
+#
+#
+#         for key in last_keys_down_tuple:
+#             if tuple([key]) in soundCollection.key_bind_map and key not in keys_down_tuple:
+#                 sound_entry = soundCollection.key_bind_map[tuple([key])]
+#                 if sound_entry.is_playing:
+#                     thread.start_new_thread(sound_entry.stop, tuple())
+#                     matches_found+=1
+#
+#         return matches_found
+
+
+
+
+
+
 
 def listen():
     global frames, record_start

@@ -1,6 +1,7 @@
 import Audio_Utils
 import pyaudio
 import json
+import os
 from Audio_Proj_Const import KEY_ID_TO_NAME_MAP
 import random
 
@@ -10,9 +11,13 @@ class SoundCollection:
         self.key_bind_map = key_bind_map
         if self.key_bind_map is None:
             self.key_bind_map = dict()
-            self.key_bind_map[tuple(["o"])] = SoundEntry("x1.wav")
-            self.key_bind_map[tuple(["p"])] = SoundEntry("x2.wav")
-            self.key_bind_map[tuple(["oem_4"])] = SoundEntry("x3.wav")
+            self.key_bind_map[frozenset(["o"])] = SoundEntry("x1.wav")
+            self.key_bind_map[frozenset(["p"])] = SoundEntry("x2.wav")
+            self.key_bind_map[frozenset(["oem_4"])] = SoundEntry("x3.wav")
+            for number in "1234567890":
+                file_name = "x" + number + ".wav"
+                if os.path.exists(file_name):
+                    self.key_bind_map[frozenset([number, "next"])] = SoundEntry(file_name)
 
     def ingestSoundboardJsonConfigFile(self, config_file_path):
         with open(config_file_path) as config_file:
@@ -23,11 +28,11 @@ class SoundCollection:
                 activation_key_codes = soundboard_entry["activationKeysNumbers"]
                 activation_key_names = [KEY_ID_TO_NAME_MAP[key_code].lower() for key_code in activation_key_codes]
                 soundEntry_to_add = SoundEntry(path_to_sound, activation_keys=activation_key_names)
-                self.key_bind_map[tuple(activation_key_names)] = soundEntry_to_add
+                self.key_bind_map[frozenset(activation_key_names)] = soundEntry_to_add
 
 
     def addSoundEntry(self, soundEntry):
-        copy = tuple(soundEntry.activation_keys)
+        copy = frozenset(soundEntry.activation_keys)
         self.key_bind_map[copy] = soundEntry
 
     def stopAllSounds(self):
@@ -76,11 +81,15 @@ class SoundEntry:
             output_device_index=2
         )
 
-    def play(self):
+    def play(self, reset_frame_index=True):
         self.is_playing = True
         self.continue_playing = True
 
-        frame_index = 0
+        if reset_frame_index:
+            frame_index = 0
+        else:
+            frame_index = self.marked_frame_index
+
         while frame_index < len(self.frames) and self.continue_playing:
             if self.mark_frame_index:
                 self.marked_frame_index = frame_index

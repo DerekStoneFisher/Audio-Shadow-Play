@@ -20,6 +20,7 @@ class KeyPressManager:
 
         if "down" in key_event.MessageName and key not in keys_down:
             keys_down.append(key)
+            print keys_down
         if "up" in key_event.MessageName:
             keys_down.remove(key)
 
