@@ -35,6 +35,7 @@ def getFramesFromFile(filename):
         while frame != '':
             frames.append(frame)
             frame = wf.readframes(1024)
+        wf.close()
         return frames
     else:
         print "error: cannot write file to frames because file does not exist\tfilename=" + str(filename)

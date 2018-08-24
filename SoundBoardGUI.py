@@ -24,9 +24,11 @@ def play(sound_entry):
 
 i = 0
 for k,v in soundCollection.key_bind_map.iteritems():
-    button = Button(window, text=v.path_to_sound, command=v.play)
+    button = Button(window, text=v.path_to_sound, command=v.playMultiThreaded)
     button.grid(column=i, row=0)
     i += 1
+
+
 
 window.mainloop()
 

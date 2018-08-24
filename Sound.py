@@ -12,6 +12,7 @@ class SoundCollection:
         self.key_bind_map = key_bind_map
         if self.key_bind_map is None:
             self.key_bind_map = dict()
+            # self.key_bind_map[frozenset(['control','multiply'])] = SoundEntry("x.wav")
             for number in "1234567890":
                 file_name = "x" + number + ".wav"
                 if os.path.exists(file_name):
@@ -53,7 +54,22 @@ class SoundCollection:
         for soundEntry in soundEntries:
             self.addSoundEntry(soundEntry)
 
-    def playSound(self, keys_down_tuple, last_keys_down_tuple, hold_to_play=Fal, restart_instead_of_stop=True):
+    def getBestSoundEntryMatchOrNull(self, keys_down):
+        keys_down = list(keys_down) # make a mutable copy that won't change the original
+        while len(keys_down) != 0:
+            if frozenset(keys_down) in self.key_bind_map:
+                return self.key_bind_map[frozenset(keys_down)]
+            else:
+                del(keys_down[0])
+        return None
+
+    def getSoundEntryByPath(self, path_to_sound):
+        for sound_entry in self.key_bind_map.values():
+            if sound_entry.path_to_sound == path_to_sound:
+                return sound_entry
+        return None
+
+    def playSound(self, keys_down_tuple, last_keys_down_tuple, hold_to_play=False, restart_instead_of_stop=True):
         if frozenset(keys_down_tuple) in self.key_bind_map: # if the bind for a sound was pressed
             #temp_previous_sound_entry = sound_entry
             sound_entry = self.key_bind_map[frozenset(keys_down_tuple)]
@@ -153,8 +169,7 @@ class SoundEntry:
             current_frame = self.frames[frame_index]
             current_frame = Audio_Utils.getPitchShiftedFrame(current_frame, self.pitch_modifier)
             self.stream.write(current_frame)
-            # self.stream2.write(current_frame)
-            #self.stream.write(self.frames[frame_index])
+            self.stream2.write(current_frame)
 
             self.stream_in_use = False
 
